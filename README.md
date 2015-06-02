@@ -6,6 +6,7 @@
 Create readgroups from barcodes with random nucleotides incorporates into them for improving sequencing depth. The analysis for marking / removing duplicates does not handle random barcodes and should be modified to include random barcodes in the analysis. This is a git for noting down the steps.
 
 The following steps are performed:
+
 1. Basecall to fastq
 2. Integrate the barcode into reads
 3. Trim off landing probes
