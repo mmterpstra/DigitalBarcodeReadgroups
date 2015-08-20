@@ -96,7 +96,7 @@ java -Xmx6g -jar AddOrReplaceReadGroups.jar ...
 
 
 ```
-perl NugeneMergeFastaFiles.pl in.bam out.bam
+perl NugeneDigitalSplitter.pl in.bam out.bam
 java -Xmx6g -jar BuildBamIndex.jar INPUT=out.bam
 
 ```
