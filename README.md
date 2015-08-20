@@ -60,7 +60,7 @@ $perl -wpe 'if($. % 4 == 1 ){chomp; my @t =split(" "); my @hd= split(":",$t[0]);
 or when you have used bcltofastq:
 
 ```
-perl NugeneMergeFastaFiles.pl randombc.fq.gz read1.fq.gz read2.fq.gz
+perl NugeneMergeFastqFiles.pl randombc.fq.gz outdir read1.fastq.gz read2.fastq.gz
 ```
 
 ## Trim off landing probes
