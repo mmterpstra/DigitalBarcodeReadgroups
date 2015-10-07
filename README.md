@@ -41,6 +41,8 @@ make install
 
 run bcltofastq on data
 
+the i8y6 part says to treat the random part as read2 and the paired ends as read1/3 
+
 ```
 ##make makefiles #note first run without commands or without --use-bases-mask y151,i8y6,y151 to infer experiment
 perl /full/path/to/bclToFastq/bcl2fastq-1.8.4/bin/configureBclToFastq.pl --output-dir /full/path/to/fastq --input-dir /full/path/to/basecalldir/Data/Intensities/BaseCalls --force --no-eamss --use-bases-mask y151,i8y6,y151 --sample-sheet /full/path/to/SampleSheetBclToFastq.csv --mismatches 1 &
@@ -62,6 +64,8 @@ or when you have used bcltofastq:
 ```
 perl NugeneMergeFastqFiles.pl randombc.fq.gz outdir read1.fastq.gz read2.fastq.gz
 ```
+
+This will add the barcode to the flowcell ID(fcid) like "${fcid}_${barcode}"
 
 ## Trim off landing probes
 ---
@@ -92,8 +96,7 @@ java -Xmx6g -jar AddOrReplaceReadGroups.jar ...
 
 ## Add read group info for each barcode / reindex
 ----
-
-
+This wil restore your fcid tag + create a readgroup for each random barcode with the correct sample.
 
 ```
 perl NugeneDigitalSplitter.pl in.bam out.bam
