@@ -11,11 +11,12 @@ sub main {
 	#open/check some resuired files
 	
 	open(my $randomBcHandle,"-|",'gzip -dc '.$ARGV[0]) 
-	or die "Cannot read open randombarcode file ".$ARGV[0];
+	or die "Cannot read open randombarcode file ".$ARGV[0]."\n".$use;
 	
 	if(! -e $ARGV[1]){
-		die "Outdir does not exist! ".$ARGV[1];
+		die "Outdir does not exist! ".$ARGV[1]."\n".$use;;
 	}
+	
 	
 	#open handles fastq files
 	
@@ -28,7 +29,7 @@ sub main {
 	my $fastq2Handle;
 	my $fastq2OutHandle;
 	
-	if(-e $ARGV[3]){
+	if(defined($ARGV[3]) && -e $ARGV[3]){
 	
 		open($fastq2Handle,"-|",'gzip -dc '.$ARGV[3]) 
 		or die "Cannot read open fq2 file ".$ARGV[3];
@@ -43,7 +44,7 @@ sub main {
 	
 	
 	#if reading record fails from both fq files then end
-	while( (((( ! -e $ARGV[3] )|| (my $fq2 = ReadFastq(\$fastq2Handle) ))) && (my $fq1 = ReadFastq(\$fastq1Handle))) && (my $rfq = ReadFastq(\$randomBcHandle)) ){
+	while( ((((defined($ARGV[3]) && ! -e $ARGV[3] )|| (my $fq2 = ReadFastq(\$fastq2Handle) ))) && (my $fq1 = ReadFastq(\$fastq1Handle))) && (my $rfq = ReadFastq(\$randomBcHandle)) ){
 		
 		warn $.if $. =~ /00000$/;
 		my $rbc = $rfq->[1];
@@ -52,13 +53,13 @@ sub main {
 		$fq1 = setFCID($fq1,$fcid."_".$rbc);
 		WriteFastq(\$fastq1OutHandle,$fq1);
 		
-		if(-e $ARGV[3]){
+		if(defined($ARGV[3]) && -e $ARGV[3]){
 			$fq2 = setFCID($fq2,$fcid."_".$rbc);
 			WriteFastq(\$fastq2OutHandle,$fq2);
 		}
 		
 	}
-	if( (((( -e $ARGV[3] ) && (my $fq2 = ReadFastq(\$fastq2Handle) ))) || (my $fq1 = ReadFastq(\$fastq1Handle))) || (my $rfq = ReadFastq(\$randomBcHandle)) ){
+	if( ((((defined($ARGV[3]) && -e $ARGV[3] ) && (my $fq2 = ReadFastq(\$fastq2Handle) ))) || (my $fq1 = ReadFastq(\$fastq1Handle))) || (my $rfq = ReadFastq(\$randomBcHandle)) ){
 		
 		unlink(GetOutFileName($ARGV[1],$ARGV[3]))if(-e GetOutFileName($ARGV[1],$ARGV[2]));
 		unlink(GetOutFileName($ARGV[1],$ARGV[3]))if(-e GetOutFileName($ARGV[1],$ARGV[3]));
