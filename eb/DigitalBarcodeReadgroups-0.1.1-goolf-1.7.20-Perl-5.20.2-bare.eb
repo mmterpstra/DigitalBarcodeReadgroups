@@ -1,7 +1,7 @@
 easyblock = 'Tarball'
 
 name = 'DigitalBarcodeReadgroups'
-version = '0.1.0'
+version = '0.1.1'
 
 homepage = 'https://github.com/mmterpstra/%s' % (name)
 description = """Misc tools"""
