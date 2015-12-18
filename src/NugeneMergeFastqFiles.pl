@@ -44,7 +44,7 @@ sub main {
 	
 	
 	#if reading record fails from both fq files then end
-	while( ((((defined($ARGV[3]) && ! -e $ARGV[3] )|| (my $fq2 = ReadFastq(\$fastq2Handle) ))) && (my $fq1 = ReadFastq(\$fastq1Handle))) && (my $rfq = ReadFastq(\$randomBcHandle)) ){
+	while( ((((not(defined($ARGV[3])))|| (my $fq2 = ReadFastq(\$fastq2Handle) ))) && (my $fq1 = ReadFastq(\$fastq1Handle))) && (my $rfq = ReadFastq(\$randomBcHandle)) ){
 		
 		warn $.if $. =~ /00000$/;
 		my $rbc = $rfq->[1];
