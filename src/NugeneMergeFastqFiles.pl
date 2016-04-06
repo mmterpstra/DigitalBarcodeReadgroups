@@ -4,9 +4,13 @@ use strict;
 use Data::Dumper;
 &main();
 
+our $qualFilter = 10;
 sub main {
 	#use List::Util qw/max/; my $in;
-	my $use="$0 randombarcodes.fq.gz outdir reads_1.fq.gz reads_2.fq.gz";
+	my $use="$0 randombarcodes.fq.gz outdir reads_1.fq.gz reads_2.fq.gz.
+
+Note:
+now filters for q<$qualFilter barcode reads and N bases in randombarcodes.fq.gz";
 	
 	#open/check some resuired files
 	
@@ -41,23 +45,35 @@ sub main {
 	
 	
 	
-	
-	
+	warn "## ". localtime(time()). " ## INFO ## Starting iteration.\n";
+	my $timelast = time();
+
 	#if reading record fails from both fq files then end
+	my $stats;
+	
 	while( ((((not(defined($ARGV[3])))|| (my $fq2 = ReadFastq(\$fastq2Handle) ))) && (my $fq1 = ReadFastq(\$fastq1Handle))) && (my $rfq = ReadFastq(\$randomBcHandle)) ){
-		
-		warn $.if $. =~ /00000$/;
+		if($. % 1000 == 0){
+			my $time = time();
+			if($time % 20 == 0 && $time != $timelast){
+				$timelast = $time;
+	        	        warn "## ". localtime($time). " ## INFO ## Currently at line ". $. ."\n";
+			}
+		}
 		my $rbc = $rfq->[1];
 		my $fcid= getFCID($fq1);
 		
-		$fq1 = setFCID($fq1,$fcid."_".$rbc);
-		WriteFastq(\$fastq1OutHandle,$fq1);
-		
-		if(defined($ARGV[3]) && -e $ARGV[3]){
-			$fq2 = setFCID($fq2,$fcid."_".$rbc);
-			WriteFastq(\$fastq2OutHandle,$fq2);
+		$stats -> {'recordcount'}++;
+		if(TestRandomBarcodeQual($rfq)){
+			$stats -> {'passcount'}++;
+			
+			$fq1 = setFCID($fq1,$fcid."_".$rbc);
+			WriteFastq(\$fastq1OutHandle,$fq1);
+			
+			if(defined($ARGV[3]) && -e $ARGV[3]){
+				$fq2 = setFCID($fq2,$fcid."_".$rbc);
+				WriteFastq(\$fastq2OutHandle,$fq2);
+			}
 		}
-		
 	}
 	if( ((((defined($ARGV[3]) && -e $ARGV[3] ) && (my $fq2 = ReadFastq(\$fastq2Handle) ))) || (my $fq1 = ReadFastq(\$fastq1Handle))) || (my $rfq = ReadFastq(\$randomBcHandle)) ){
 		
@@ -65,6 +81,7 @@ sub main {
 		unlink(GetOutFileName($ARGV[1],$ARGV[3]))if(-e GetOutFileName($ARGV[1],$ARGV[3]));
 		die "Some fastq handles are still readable:This program produced invalid output.Check your fastq files!";
 	}
+	 warn "## ". localtime(time()). " ## INFO ## Done with " . $stats -> {'recordcount'} . " records processed and " .$stats -> {'passcount'} . " records passed at line ". $. ."\n";
 }
 sub getFCID{
 	my $fq = shift @_;
@@ -130,4 +147,25 @@ sub GetOutFileName {
 	$outFile = $outdir . $outFile . '.fq.gz';
 	
 	return $outFile;
+}
+
+sub TestRandomBarcodeQual {
+	my $fq = shift @_;
+	if(not( $fq->[1] =~ /^[ATCGatcg]*$/)){
+		#warn $fq->[1] . $&;
+		#die $fq->[1] if($. > 20);
+		return 0;
+	}
+	#warn "something goes wrong here";
+	my @quals = split('',$fq->[2]);
+	#die scalar(@quals), Dumper(\@quals);
+	my @qualsOrd = map{ord()}(@quals);
+	for my $qual (@qualsOrd){
+		#die Dumper($fq,\@quals);
+		if($qual < (33+$qualFilter)){
+			#die Dumper($fq,\@quals,\@qualsOrd);
+			return 0 if($qual < (33+10));
+		}
+	}
+	return 1;
 }
