@@ -2,18 +2,27 @@
 use warnings;
 use strict;
 use Data::Dumper;
+use Getopt::Std;
+use Scalar::Util qw(looks_like_number);
+
 &main();
 
-our $qualFilter = 10;
 sub main {
 	#use List::Util qw/max/; my $in;
-	my $use="$0 randombarcodes.fq.gz outdir reads_1.fq.gz reads_2.fq.gz.
+	
+	my $use="$0 [-q INT] randombarcodes.fq.gz outdir reads_1.fq.gz reads_2.fq.gz.
 
 Note:
-now filters for q<$qualFilter barcode reads and N bases in randombarcodes.fq.gz";
+now filters for illumina 1.8 base quality < -q INT barcode reads and N bases in randombarcodes.fq.gz";
 	
 	#open/check some resuired files
 	
+	my $opts;
+        getopts('q:', \%{$opts});
+        die "[FATAL] if '-q INT' is specified use integer for INT".$use if(defined($opts -> {'q'}) && not(looks_like_number($opts -> {'q'})));
+	
+	die $use."\n" if(scalar(@ARGV) < 2);
+
 	open(my $randomBcHandle,"-|",'gzip -dc '.$ARGV[0]) 
 	or die "Cannot read open randombarcode file ".$ARGV[0]."\n".$use;
 	
@@ -21,14 +30,13 @@ now filters for q<$qualFilter barcode reads and N bases in randombarcodes.fq.gz"
 		die "Outdir does not exist! ".$ARGV[1]."\n".$use;;
 	}
 	
-	
 	#open handles fastq files
 	
 	open(my $fastq1Handle,"-|",'gzip -dc '.$ARGV[2]) 
-	or die "Cannot read open fq1 file ".$ARGV[2];
+	or die "[FATAL] Cannot read open fq1 file ".$ARGV[2];
 	
 	open(my $fastq1OutHandle,"|-",'gzip -c > '.GetOutFileName($ARGV[1],$ARGV[2])) 
-	or die "Cannot write fq1 file ".$ARGV[2];
+	or die "[FATAL] Cannot write fq1 file ".$ARGV[2];
 	
 	my $fastq2Handle;
 	my $fastq2OutHandle;
@@ -63,7 +71,7 @@ now filters for q<$qualFilter barcode reads and N bases in randombarcodes.fq.gz"
 		my $fcid= getFCID($fq1);
 		
 		$stats -> {'recordcount'}++;
-		if(TestRandomBarcodeQual($rfq)){
+		if(not(defined($opts -> {'q'})) || TestRandomBarcodeQual($opts -> {'q'},$rfq)){
 			$stats -> {'passcount'}++;
 			
 			$fq1 = setFCID($fq1,$fcid."_".$rbc);
@@ -150,6 +158,7 @@ sub GetOutFileName {
 }
 
 sub TestRandomBarcodeQual {
+	my $q = shift @_;
 	my $fq = shift @_;
 	if(not( $fq->[1] =~ /^[ATCGatcg]*$/)){
 		#warn $fq->[1] . $&;
@@ -162,9 +171,9 @@ sub TestRandomBarcodeQual {
 	my @qualsOrd = map{ord()}(@quals);
 	for my $qual (@qualsOrd){
 		#die Dumper($fq,\@quals);
-		if($qual < (33+$qualFilter)){
+		if($qual < (33+$q)){
 			#die Dumper($fq,\@quals,\@qualsOrd);
-			return 0 if($qual < (33+10));
+			return 0 ;#if($qual < (33+$q));
 		}
 	}
 	return 1;
