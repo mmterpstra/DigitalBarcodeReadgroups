@@ -9,12 +9,12 @@ This is a git for noting down the steps using simple `perl` tools.
 **The following steps are performed**
 
 1. [Basecall to fastq](#basecalling)
-2. [Integrate the barcode into reads](#-Integrate-the-barcode-into-reads)
-3. [Trim off landing probes](#Trim-off-landing-probes) 
-4. [Align](#Align)
-5. [Add read group info](#Add-read-group-info)
-6. [Expand read group info](#Expand-read-group-info)
-7. [Mark duplicates](#Mark-duplicates)
+2. [Integrate the barcode into reads](#integrate-the-barcode-into-reads)
+3. [Trim off landing probes](#trim-off-landing-probes) 
+4. [Align](#align)
+5. [Add read group info](#add-read-group-info)
+6. [Expand read group info](#expand-read-group-info)
+7. [Mark duplicates](#mark-duplicates)
 
 **Requirements**
 
@@ -37,7 +37,7 @@ Add the `scr/` dir to your path.
 
 
 
-# Basecalling
+## Basecalling
 ----
 
 Use bcl to fastq from illumina. This is an example for questions and documentation see [here](http://support.illumina.com/downloads/bcl2fastq_conversion_software.html). This is not a complete guide for more detailed install instructions visit the illumina website.
