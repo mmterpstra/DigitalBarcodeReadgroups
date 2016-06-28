@@ -158,9 +158,8 @@ java -Xmx6g -jar AddOrReplaceReadGroups.jar ...
 
 ## Expand read group info
 
-Add read group info for each barcode / reindex
 ----
-This wil restore your fcid tag + create a readgroup for each random barcode with the correct sample.
+Add read group info for each barcode and reindex. This wil restore your fcid tag + create a readgroup for each random barcode with the correct sample.
 
 ```
 perl NugeneDigitalSplitter.pl in.bam out.bam
