@@ -8,13 +8,13 @@ This is a git for noting down the steps using simple `perl` tools.
 
 **The following steps are performed**
 
-1. Basecall to fastq
-2. Integrate the barcode into reads
-3. Trim off landing probes
-4. Align
-5. Add read group info
-6. Add read group info for each barcode / reindex
-7. Mark duplicates
+1. [Basecall to fastq](#Basecalling)
+2. [Integrate the barcode into reads](#Integrate-the-barcode-into-reads)
+3. [Trim off landing probes](Trim-off-landing-probes) 
+4. [Align](Align)
+5. [Add read group info](#Add-read-group-info)
+6. [Expand read group info](#Expand-read-group-info)
+7. [Mark duplicates](#Mark-duplicates)
 
 **Requirements**
 
@@ -37,7 +37,7 @@ Add the `scr/` dir to your path.
 
 
 
-## Basecall to fastq
+## Basecalling
 ----
 
 Use bcl to fastq from illumina. This is an example for questions and documentation see [here](http://support.illumina.com/downloads/bcl2fastq_conversion_software.html). This is not a complete guide for more detailed install instructions visit the illumina website.
@@ -156,7 +156,9 @@ Use AddOrReplaceReadGroups from the picard toolkit to add your readgroups.
 java -Xmx6g -jar AddOrReplaceReadGroups.jar ...
 ```
 
-## Add read group info for each barcode / reindex
+## Expand read group info
+
+Add read group info for each barcode / reindex
 ----
 This wil restore your fcid tag + create a readgroup for each random barcode with the correct sample.
 
