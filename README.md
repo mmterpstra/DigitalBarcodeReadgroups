@@ -8,7 +8,7 @@ This is a git for noting down the steps using simple `perl` tools.
 
 **The following steps are performed**
 
-1. [Basecall to fastq](#-Basecalling)
+1. [Basecall to fastq](#Basecalling)
 2. [Integrate the barcode into reads](#-Integrate-the-barcode-into-reads)
 3. [Trim off landing probes](#Trim-off-landing-probes) 
 4. [Align](#Align)
