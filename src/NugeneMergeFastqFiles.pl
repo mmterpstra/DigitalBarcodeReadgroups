@@ -10,17 +10,19 @@ use Scalar::Util qw(looks_like_number);
 sub main {
 	#use List::Util qw/max/; my $in;
 	
-	my $use="$0 [-q INT] randombarcodes.fq.gz outdir reads_1.fq.gz reads_2.fq.gz.
-
+	my $use="$0 [-u] [-q INT] randombarcodes.fq.gz outdir reads_1.fq.gz [reads_2.fq.gz].
+	-q	filter for index base quality to discard reads
+	-u	use apped like bcl2fastq/nugene umi index to end of readname like \@EAS139:136:FC706VJ:2:2104:15343:197393:UMISEQUENCE (readname source: wikipedia.org)
 Note:
 now filters for illumina 1.8 base quality < -q INT barcode reads and N bases in randombarcodes.fq.gz";
 	
 	#open/check some resuired files
 	
 	my $opts;
-        getopts('q:', \%{$opts});
+        getopts('uq:', \%{$opts});
         die "[FATAL] if '-q INT' is specified use integer for INT".$use if(defined($opts -> {'q'}) && not(looks_like_number($opts -> {'q'})));
 	
+	warn "-u set " if(defined($opts -> {'u'}));
 	die $use."\n" if(scalar(@ARGV) < 2);
 
 	open(my $randomBcHandle,"-|",'gzip -dc '.$ARGV[0]) 
@@ -73,12 +75,20 @@ now filters for illumina 1.8 base quality < -q INT barcode reads and N bases in 
 		$stats -> {'recordcount'}++;
 		if(not(defined($opts -> {'q'})) || TestRandomBarcodeQual($opts -> {'q'},$rfq)){
 			$stats -> {'passcount'}++;
-			
-			$fq1 = setFCID($fq1,$fcid."_".$rbc);
+			if(not(defined($opts -> {'u'}))){
+				$fq1 = setFCID($fq1,$fcid."_".$rbc);
+			}else{
+				$fq1 = setUMI($fq1,$rbc);
+			}
 			WriteFastq(\$fastq1OutHandle,$fq1);
 			
 			if(defined($ARGV[3]) && -e $ARGV[3]){
-				$fq2 = setFCID($fq2,$fcid."_".$rbc);
+				if(not(defined($opts -> {'u'}))){
+                                	$fq2 = setFCID($fq2,$fcid."_".$rbc);
+                        	}else{
+                	              	$fq2 = setUMI($fq2,$rbc);
+		                }
+
 				WriteFastq(\$fastq2OutHandle,$fq2);
 			}
 		}
@@ -105,7 +115,36 @@ sub setFCID{
 	$fq->[0]=join(":",@h);
 	return $fq;
 }
-
+sub setUMI{
+	my $fq = shift @_;
+        my $umi = shift @_;
+        my @h = split(" ",$fq->[0]);
+        my @rname = split(":",shift @h);
+	#if 7 or more fields assume illumina 1.8+ or not make any assumptions and append to rname
+	if(scalar(@rname) > 6){
+		$rname[7]=$umi;
+	}else{
+		push @rname,$umi;
+	}
+	unshift(@h,join(':',@rname));
+        $fq->[0]=join(" ",@h);
+        return $fq;
+}
+sub getUMI{
+	my $fq = shift @_;
+        #die $fq->[0];
+        my $umi;
+	my @h = split(" ",$fq->[0]);
+        my @rname = split(":",shift @h);
+        #if 7 or more fields assume illumina 1.8+ or not make any assumptions and last field of  to rname
+        if(scalar(@rname) > 6){
+                $umi=$rname[7];
+        }else{
+	      	$umi=$rname[-1];
+        }
+	$umi =~ m/^[atcgnATCGN\+]*$/ or die "$0 Invalid umi should match ".'[ACTGNatcgn\+]*'.Dumper($fq)." ";
+        return $umi;
+}
 sub ReadFastq {
 	my $fqHandle = ${shift(@_)};
 	return if(eof($fqHandle));
