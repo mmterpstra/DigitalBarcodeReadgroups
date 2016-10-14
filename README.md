@@ -64,8 +64,10 @@ make install
 Run bcl2fastq. This is ran on a paired end run starting from the main run folder. Note the `--use-bases-mask y*,i8y*,y*` and the `--minimum-trimmed-read-length 0` options. 
 
  * `--use-bases-mask y*,i8y*,y*` will output the N6 random/UMI barcodes a second read. For Single End run only specify `--use-bases-mask y*,i8y*`.
- * `--minimum-trimmed-read-length 0` this will prevent the bcl2fastq software from truncating your N6 barcodes/UMI into sequences of NNNNNN because the software is set by default to mask the cycles with N these when they are less then 22nt long.
- * In the Samplesheet.csv it's also advised to turn on the Illumina adapter trimming when running PE sequencing.
+ * `--minimum-trimmed-read-length 0` this will prevent the bcl2fastq software from truncating your N6 barcodes/UMI into sequences of NNNNNN because the software is set by default to mask the cycles with N these when they are less then 22nt long. Note: this might even be set to `5` but did not test it.
+ * In the Samplesheet.csv it's also advised to turn on the Illumina adapter trimming when running PE sequencing. 
+
+this code below is for running the analysis without adapter trimming
 
 ```
 bcl2fastq \
@@ -78,6 +80,30 @@ bcl2fastq \
  --barcode-mismatches 1 \
  --minimum-trimmed-read-length 0 \
  --create-fastq-for-index-reads
+```
+
+With adapter trimming you should confirm the settings part contains the following adapter sequences. 
+
+```
+[Settings]
+Adapter,AGATCGGAAGAGCACACGTCTGAACTCCAGTCA
+AdapterRead3,AGATCGGAAGAGCGTCGTGTAGGGAAAGA
+
+```
+
+Also you need to edit the bcl2fastq call to replace `--minimum-trimmed-read-length 0` with `--mask-short-adapter-reads 5` resulting into the command below.
+
+```
+bcl2fastq --sample-sheet SampleSheet.csv \
+ -i Data/Intensities/BaseCalls/ \
+ -R ./ \
+ --intensities-dir Data/Intensities/ \
+ -o Data/Intensities/BaseCalls/run8 \
+ --use-bases-mask y*,i8y*,y* \
+ --create-fastq-for-index-reads \
+ --barcode-mismatches 1 \
+ --mask-short-adapter-reads 5
+
 ```
 
 ----
@@ -170,7 +196,7 @@ java -Xmx6g -jar picard.jar BuildBamIndex INPUT=out.bam
 ## Mark duplicates
 ---
 
-This should work. Although the duplicate filteing might not be completely perfect because It does't take into account the Alignment distances of the different UMIs.
+This should work. Although the duplicate filtering might not be completely perfect because It does't take into account the Alignment distances of the different UMIs.
 
 ```
 java -Xmx6g -jar picard.jar MarkDuplicates...
