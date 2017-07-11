@@ -2,6 +2,8 @@
 use warnings;
 use strict;
 use Data::Dumper;
+use Getopt::Std;
+
 #$ARGV[0]="/home/terpstramm/workspace/FqToBcFq/src/head_400_120830_SN163_0474_BD0WDYACXX_L5_ACTGAT_1.merged.bam";
 #$ARGV[1]="/home/terpstramm/workspace/FqToBcFq/src/head_400_120830_SN163_0474_BD0WDYACXX_L5_ACTGAT_1.merged.nugene.bam";
 
@@ -10,20 +12,124 @@ use Data::Dumper;
 
 sub main {
 	#use List::Util qw/max/; my $in;
-	my $use="$0 input.bam output.bam with the header and body containg the updated Readgroup/\@RG info. Needs Readgroup info to be added about the sample see: PicardAddOrReplaceReadgroups. Note using PicardAddOrReplaceReadgroups: be practical if it accepts your input then it is okay important fields:LB. no streaming into this program => it will fail";
 	
-	my $bam;
-	$bam = $ARGV[0] if(-e $ARGV[0]);
-	die "$ARGV[0]: file does not exist!$use" if(! -e $ARGV[0]);
+	warn INIT_MESSAGE();
 
-	die "No output bam specified" if(not(defined($ARGV[1])) || length($ARGV[1])==0);
+	my $opts = {};
+	getopts('hp:l:',$opts);
+	
+	if( $opts -> {'h'} ){
+		warn HELP_MESSAGE();
+		exit();
+	}
+
+	my $bam = "";
+	if(defined($ARGV[0]) && -e $ARGV[0]){
+		$bam = $ARGV[0];
+	}else{
+		die "## ".localtime(time())." ## ERROR: file '$bam' does not exist!\n".HELP_MESSAGE();
+	}
+	
+
+
+	die "No output bam specified".HELP_MESSAGE() if(not(defined($ARGV[1])) || length($ARGV[1])==0);
 	my $bamout=$ARGV[1];
 	
 	#warn "$use";
-	my $rgdata=CollectNugeneRgData($bam);
-	ApplyNugeneRgData($bam,$bamout,$rgdata);
+	if(not($opts -> {'p'})){
+		my $rgdata=CollectNugeneRgData($bam);
+		ApplyNugeneRgData($bam,$bamout,$rgdata);
+	}else{
+		ApplyPicardTag($bam,$bamout,$opts);
+	}
 }
 
+sub INIT_MESSAGE {
+	
+	die "## ".localtime(time())." ## ERROR Missing samtools please add samtools to your \$PATH\n" if(`which samtools` eq "");
+	my $perlver= `(perl --version | head -n 2| tail -n 1 | perl -wpe 'chomp;s/This is //g') 2>/dev/null`;
+	my $samtoolsver .= `samtools 2>/dev/stdout | grep 'Version' | cut -d\" \" -f2-`;
+	chomp $samtoolsver;
+	my $ver = VERSION_MESSAGE();
+	my $time = localtime(time());
+	
+	my $append;
+	my $host = `echo -n \$HOST `;
+	$append .= " on host '$host'" if($host);
+	my $user = `echo -n \$USER`;
+	$append .= " as user '$user'" if($user);
+
+	
+	my $init =<<"EOF";
+## $time ## INIT running '$0 @ARGV' version '$ver' with perl '$perlver' and samtools '$samtoolsver'$append.
+EOF
+	
+}
+
+sub HELP_MESSAGE {
+	my $version = VERSION_MESSAGE();
+	return <<"EOF";
+use: $0 [-h|-p TAG  -l INT] input.bam output.bam
+
+default mode
+ Add readsgroups for each unique UMI. The output.bam will contain with the header and body containg the updated Readgroup/\@RG info.
+
+options
+ -p TAG	picard UmiAwareMarkDuplicatesWithMateCigar mode. Adds the umis to TAG instead of creating new readgroups. Recommended value is "RX" for TAG.
+ -l INT shorten the UMI to INT length only functions on conjunction with -p
+
+Needs Readgroup info to be added about the sample see: PicardAddOrReplaceReadgroups. 
+
+Notes
+	- using PicardAddOrReplaceReadgroups: be practical if it accepts your input then it is ok. 
+	- required fields for default mode: LB. 
+	- no streaming into this program => it will fail"
+	- needs samtools to read/write bam files.
+EOF
+}
+
+sub VERSION_MESSAGE {
+	my $md5cmd ="(md5sum $0 | cut -d \" \" -f1,1)2>/dev/null";
+	chomp $md5cmd;
+	return `$md5cmd`;
+}
+
+sub ApplyPicardTag {
+	my $bam = shift @_;
+	my $bamout = shift @_;
+	my $opts = shift @_;
+	my $tag	= $opts -> {'p'};
+
+	my $cmdin = "samtools view -h $bam";
+	open(my $in,'-|',$cmdin) or die "## ".localtime(time())." ## ERROR invalid read from command $cmdin";
+	
+	my $cmdout = "samtools view  -S -b - > $bamout";
+	#my $cmdout = "cat - > $bamout";
+	open(my $out,'|-',$cmdout) or die "## ".localtime(time())." ## ERROR invalid write to command $cmdout";
+	
+	while(<$in>){
+		chomp;
+		my $line = $_;
+		#warn $line;
+		if($line =~ m/^\@/){
+			print $out $line."\n";
+		}else{
+			my $sam;
+			@{$sam} = split("\t",$line);
+			#my $rgID = SamGetReadGroupID($sam);
+			my $randombc = SamGetRandombc($sam);
+			$randombc = substr($randombc,0,$opts -> {'l'}) if(defined($opts -> {'l'}) && $opts -> {'l'} > 0);
+			$sam = SamRemoveRandombc($sam);
+			
+			#a
+			$line .= "\t$tag:Z:$randombc";
+			#die "$line";
+			print $out $line."\n";
+		}
+	}
+	close $out;
+	warn "## ".localtime(time())." ## DONE\n"
+}
 
 sub CollectNugeneRgData {
 	my $bam = shift @_;
@@ -33,13 +139,12 @@ sub CollectNugeneRgData {
 	my $rgdata = CollectBarcodes($bam,$originalRgs);
 	
 	return $rgdata;
-	
 }
 sub GetReadGroupData {
 	my $bam = shift @_;
 	
 	my $cmd = "samtools view -H $bam";
-	open(my $in,'-|',$cmd) or die "invalid read from command $cmd";
+	open(my $in,'-|',$cmd) or die "## ".localtime(time())." ## invalid read from command $cmd";
 
 	my $rgs;
 
@@ -80,7 +185,7 @@ sub CollectBarcodes {
 	my $rgsOld = shift @_;
 	
 	my $cmd = "samtools view $bam";
-	open(my $in,'-|',$cmd) or die "invalid read from command $cmd";
+	open(my $in,'-|',$cmd) or die "## ".localtime(time())." ## invalid read from command $cmd";
 
 	my $rgs;
 	my $bcs;
@@ -128,7 +233,7 @@ sub SamGetReadGroupID {
 			$rgId = $1;
 		}
 	}
-	die "No RGID present in sam record! Dump of sam record:".Dumper($sam) if(not(defined($rgId)));
+	die "## ".localtime(time())." ## ERROR No RGID present in sam record! Dump of sam record:".Dumper($sam) if(not(defined($rgId)));
 	
 	return $rgId;
 }
@@ -140,7 +245,7 @@ sub SamGetRandombc {
 	#here
 	$readname[2] =~ /([ATCGN]+$)/;
 	my $randombc=$1;
-	die "No randombc present in sam record! Dump of sam record:".Dumper($sam) if(not(defined($randombc)));
+	die "## ".localtime(time())." ## ERROR No randombc present in sam record! Dump of sam record:".Dumper($sam) if(not(defined($randombc)));
 	
 	return $randombc;
 
@@ -165,11 +270,11 @@ sub ApplyNugeneRgData{
 	my $rgdata = shift @_;
 	
 	my $cmdin = "samtools view -h $bam";
-	open(my $in,'-|',$cmdin) or die "invalid read from command $cmdin";
+	open(my $in,'-|',$cmdin) or die "## ".localtime(time())." ## ERROR invalid read from command $cmdin";
 	
 	my $cmdout = "samtools view  -S -b - > $bamout";
 	#my $cmdout = "cat - > $bamout";
-	open(my $out,'|-',$cmdout) or die "invalid read from command $cmdout";
+	open(my $out,'|-',$cmdout) or die "## ".localtime(time())." ## ERROR invalid read from command $cmdout";
 	
 	my $readsGroupsPrinted=0;
 	
@@ -191,14 +296,17 @@ sub ApplyNugeneRgData{
 			my $randombc = SamGetRandombc($sam);
 			$sam = SamRemoveRandombc($sam);
 			
+			#add new random barcode
 			my $newRgId=$rgdata->{'bcs'}->{$rgID.'_'.$randombc}->{'ID'};
 			$line =~ s/RG:Z:[^\t\n]+/RG:Z:$newRgId/;
 			
 			print $out $line."\n";
 		}
 	}
-	close $out;warn $bamout
+	close $out;
+	
 }
+
 
 sub ReadGroupDataToString {
 	my $rgdata = shift @_;
