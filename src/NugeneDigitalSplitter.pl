@@ -78,13 +78,14 @@ options
  -p TAG	picard UmiAwareMarkDuplicatesWithMateCigar mode. Adds the umis to TAG instead of creating new readgroups. Recommended value is "RX" for TAG.
  -l INT shorten the UMI to INT length only functions on conjunction with -p
 
-Needs Readgroup info to be added about the sample see: PicardAddOrReplaceReadgroups. 
+Needs Readgroup info to be added about the sample see: Picard AddOrReplaceReadgroups. 
 
 Notes
-	- using PicardAddOrReplaceReadgroups: be practical if it accepts your input then it is ok. 
-	- required fields for default mode: LB. 
+	- using Picard AddOrReplaceReadgroups: be practical if it accepts your input then it is ok. 
+	- required fields for default mode: LB / RG. 
 	- no streaming into this program => it will fail"
 	- needs samtools to read/write bam files.
+	- TAG should match /[A-Za-z][A-Za-z0-9]/
 EOF
 }
 
@@ -94,11 +95,16 @@ sub VERSION_MESSAGE {
 	return `$md5cmd`;
 }
 
+sub validateSamTag {
+	die "## ".localtime(time())." ## ERROR invalid tag does not match /[A-Za-z][A-Za-z0-9]/" if(not($tag =~ m/[A-Za-z][A-Za-z0-9]/));
+}
+
 sub ApplyPicardTag {
 	my $bam = shift @_;
 	my $bamout = shift @_;
 	my $opts = shift @_;
 	my $tag	= $opts -> {'p'};
+	validateSamTag($tag);
 
 	my $cmdin = "samtools view -h $bam";
 	open(my $in,'-|',$cmdin) or die "## ".localtime(time())." ## ERROR invalid read from command $cmdin";
