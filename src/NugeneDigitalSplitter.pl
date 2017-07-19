@@ -96,6 +96,7 @@ sub VERSION_MESSAGE {
 }
 
 sub validateSamTag {
+	my $tag = shift @_;
 	die "## ".localtime(time())." ## ERROR invalid tag does not match /[A-Za-z][A-Za-z0-9]/" if(not($tag =~ m/[A-Za-z][A-Za-z0-9]/));
 }
 
@@ -109,7 +110,7 @@ sub ApplyPicardTag {
 	my $cmdin = "samtools view -h $bam";
 	open(my $in,'-|',$cmdin) or die "## ".localtime(time())." ## ERROR invalid read from command $cmdin";
 	
-	my $cmdout = "samtools view  -S -b - > $bamout";
+	my $cmdout = "samtools view -h -S -b > $bamout";
 	#my $cmdout = "cat - > $bamout";
 	open(my $out,'|-',$cmdout) or die "## ".localtime(time())." ## ERROR invalid write to command $cmdout";
 	
@@ -126,7 +127,7 @@ sub ApplyPicardTag {
 			my $randombc = SamGetRandombc($sam);
 			$randombc = substr($randombc,0,$opts -> {'l'}) if(defined($opts -> {'l'}) && $opts -> {'l'} > 0);
 			$sam = SamRemoveRandombc($sam);
-			
+			$line = SamAsString($sam);
 			#a
 			$line .= "\t$tag:Z:$randombc";
 			#die "$line";
@@ -137,6 +138,10 @@ sub ApplyPicardTag {
 	warn "## ".localtime(time())." ## DONE\n"
 }
 
+sub SamAsString {
+	my $sam = shift @_;
+	return join("\t", @{$sam});
+}
 sub CollectNugeneRgData {
 	my $bam = shift @_;
 	
@@ -265,7 +270,7 @@ sub SamRemoveRandombc {
 	$readname[2] =~ s/[ATCGN]+$//g;
 	#my $randombc=$1;
 	#die "No randombc present in sam record! Dump of sam record:".Dumper($sam) if(not(defined($randombc)));
-	$sam->[0]=join("\t",@readname);
+	$sam->[0]=join(':',@readname);
 	
 	return $sam;
 }
