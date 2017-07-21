@@ -125,10 +125,14 @@ sub ApplyPicardTag {
 			@{$sam} = split("\t",$line);
 			#my $rgID = SamGetReadGroupID($sam);
 			my $randombc = SamGetRandombc($sam);
+
+                        $sam = SamRemoveRandombc($sam);
+                       	$line = SamAsString($sam);
+
 			$randombc = substr($randombc,0,$opts -> {'l'}) if(defined($opts -> {'l'}) && $opts -> {'l'} > 0);
-			$sam = SamRemoveRandombc($sam);
-			$line = SamAsString($sam);
-			#a
+			#
+			$randombc = $randombc .'N' x ($opts -> {'l'} - length($randombc)) if(defined($opts -> {'l'}) && $opts -> {'l'} > 0 && length($randombc) < $opts -> {'l'});
+			
 			$line .= "\t$tag:Z:$randombc";
 			#die "$line";
 			print $out $line."\n";
